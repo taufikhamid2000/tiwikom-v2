@@ -1,0 +1,238 @@
+@model Tip
+@inject TIWIKOM.WebApp.Services.InteractionService InteractionService
+@inject Microsoft.AspNetCore.Identity.UserManager<ApplicationUser> UserManager
+@{
+    ViewData["Title"] = Model?.Title ?? "Tip Details";
+    var currentUser = await UserManager.GetUserAsync(User);
+    var hasLiked = currentUser != null && Model != null ? await InteractionService.HasUserLikedTipAsync(Model.Id, currentUser.Id) : false;
+    var likeCount = Model != null ? await InteractionService.GetLikeCountAsync(Model.Id) : 0;
+    var commentCount = Model != null ? await InteractionService.GetCommentCountAsync(Model.Id) : 0;
+}
+
+<div class="container mt-5">
+    @if (Model != null)
+    {
+        <div class="row">
+            <div class="col-md-8">
+                <h1>@Model.Title</h1>
+                <div class="mb-3">
+                    <span class="badge bg-primary">@Model.Category?.Name</span>
+                    <span class="badge bg-secondary">@Model.Abbreviation</span>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-body tip-content">
+                        <div>@Html.Raw(Model.Content)</div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <strong>By:</strong> @Model.Author?.FirstName @Model.Author?.LastName<br>
+                                <strong>Posted:</strong> @Model.CreatedDate.ToString("MMMM dd, yyyy")<br>
+                                <strong>Views:</strong> @Model.ViewCount
+                            </small>
+                            
+                            <!-- Interaction Buttons -->
+                            <div class="btn-group" role="group">
+                                @if (User.Identity?.IsAuthenticated == true)
+                                {
+                                    <button type="button" class="btn btn-outline-danger" id="likeBtn" onclick="toggleLike(@Model.Id)">
+                                        <i class="bi @(hasLiked ? "bi-heart-fill" : "bi-heart")"></i> 
+                                        <span id="likeCount">@likeCount</span>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <a href="/Identity/Account/Login" class="btn btn-outline-danger">
+                                        <i class="bi bi-heart"></i> @likeCount
+                                    </a>
+                                }
+                                
+                                <button type="button" class="btn btn-outline-primary" onclick="scrollToComments()">
+                                    <i class="bi bi-chat-dots"></i> <span id="commentCount">@commentCount</span>
+                                </button>
+                                
+                                <button type="button" class="btn btn-outline-success" onclick="shareTip()">
+                                    <i class="bi bi-share"></i> Share
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @if (User.IsInRole("Admin") || (User.Identity?.Name == Model.Author?.UserName))
+                {
+                    <div class="mb-4">
+                        <a asp-controller="Tips" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">Edit</a>
+                        <a asp-controller="Tips" asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger">Delete</a>
+                    </div>
+                }
+
+                <!-- Comments Section -->
+                <div class="card mt-4" id="commentsSection">
+                    <div class="card-header">
+                        <h5>Comments (<span id="commentCountHeader">@commentCount</span>)</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <div class="mb-3">
+                                <textarea class="form-control" id="commentContent" rows="3" placeholder="Add a comment..."></textarea>
+                                <button class="btn btn-primary mt-2" onclick="addComment(@Model.Id)">Post Comment</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info">
+                                <a href="/Identity/Account/Login">Login</a> to leave a comment.
+                            </div>
+                        }
+                        
+                        <div id="commentsList">
+                            <!-- Comments will be loaded here via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card sticky-top">
+                    <div class="card-body">
+                        <h5 class="card-title">About the Author</h5>
+                        <p class="card-text">
+                            <strong>@Model.Author?.FirstName @Model.Author?.LastName</strong><br>
+                            <small class="text-muted">@Model.Author?.Email</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">← Back to Tips</a>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning">Tip not found.</div>
+        <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">← Back to Tips</a>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // Load comments on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadComments(@Model?.Id);
+        });
+
+        function toggleLike(tipId) {
+            fetch(`/api/interactions/like/${tipId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('likeCount').textContent = data.likeCount;
+                const icon = document.querySelector('#likeBtn i');
+                if (data.isLiked) {
+                    icon.classList.remove('bi-heart');
+                    icon.classList.add('bi-heart-fill');
+                } else {
+                    icon.classList.remove('bi-heart-fill');
+                    icon.classList.add('bi-heart');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function addComment(tipId) {
+            const content = document.getElementById('commentContent').value.trim();
+            if (!content) {
+                alert('Please enter a comment');
+                return;
+            }
+
+            fetch('/api/interactions/comment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ tipId: tipId, content: content })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('commentContent').value = '';
+                loadComments(tipId);
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function loadComments(tipId) {
+            fetch(`/api/interactions/comments/${tipId}`)
+                .then(response => response.json())
+                .then(comments => {
+                    const commentsList = document.getElementById('commentsList');
+                    const count = comments.length;
+                    document.getElementById('commentCount').textContent = count;
+                    document.getElementById('commentCountHeader').textContent = count;
+                    
+                    if (comments.length === 0) {
+                        commentsList.innerHTML = '<p class="text-muted">No comments yet. Be the first to comment!</p>';
+                        return;
+                    }
+
+                    commentsList.innerHTML = comments.map(comment => `
+                        <div class="border-bottom pb-3 mb-3">
+                            <div class="d-flex justify-content-between">
+                                <strong>${comment.authorName}</strong>
+                                ${comment.canDelete ? `<button class="btn btn-sm btn-link text-danger" onclick="deleteComment(${comment.id}, ${tipId})"><i class="bi bi-trash"></i></button>` : ''}
+                            </div>
+                            <p class="mb-1">${comment.content}</p>
+                            <small class="text-muted">${comment.createdDate}</small>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function deleteComment(commentId, tipId) {
+            if (!confirm('Are you sure you want to delete this comment?')) return;
+
+            fetch(`/api/interactions/comment/${commentId}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.ok) {
+                    loadComments(tipId);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function scrollToComments() {
+            document.getElementById('commentsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function shareTip() {
+            const url = window.location.href;
+            const title = '@Model?.Title';
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: title,
+                    text: 'Check out this tip on TIWIKOM!',
+                    url: url
+                }).catch(err => console.log('Error sharing:', err));
+            } else {
+                // Fallback: Copy to clipboard
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('Link copied to clipboard!');
+                });
+            }
+        }
+    </script>
+}

@@ -1,0 +1,41 @@
+@model Tip
+@{
+    ViewData["Title"] = "Delete Tip";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h2>Delete Tip</h2>
+            <hr />
+
+            <div class="alert alert-danger">
+                <h4>Are you sure you want to delete this tip?</h4>
+                <p>This action cannot be undone.</p>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">@Model.Title</h5>
+                    <p class="card-text">
+                        <strong>Abbreviation:</strong> Things I Wish I Knew On My @Model.Abbreviation<br />
+                        <strong>Category:</strong> @Model.Category?.Name<br />
+                        <strong>Author:</strong> @Model.Author?.UserName<br />
+                        <strong>Created:</strong> @Model.CreatedDate.ToLocalTime().ToString("MMM dd, yyyy")
+                    </p>
+                    <div class="card-text">
+                        @Model.Content
+                    </div>
+                </div>
+            </div>
+
+            <form asp-controller="Tips" asp-action="Delete" method="post">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-danger">Confirm Delete</button>
+                    <a asp-controller="Tips" asp-action="Detail" asp-route-id="@Model.Id" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
