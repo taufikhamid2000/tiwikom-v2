@@ -2,6 +2,10 @@
 
 A modern ASP.NET Core web application for sharing workplace wisdom and tips across your organization.
 
+**Live demo:** https://tiwikom.vercel.app/
+
+> **Status: Archived.** This project is no longer actively maintained. The live demo above may still be reachable but is not receiving updates. This repo is the more complete ASP.NET Core rewrite of the earlier Angular prototype, [tiwikom](https://github.com/taufikhamid2000/tiwikom).
+
 ## 📋 Overview
 
 TIWIKOM is a full-featured tip-sharing platform where employees can post valuable insights, advice, and lessons learned. Built with **ASP.NET Core MVC**, **Entity Framework Core**, and **Bootstrap**, it provides a professional experience for knowledge sharing.
@@ -57,8 +61,8 @@ TIWIKOM is a full-featured tip-sharing platform where employees can post valuabl
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/TIWIKOM.git
-cd TIWIKOM
+git clone https://github.com/taufikhamid2000/tiwikom-v2.git
+cd tiwikom-v2
 ```
 
 ### 2. Restore dependencies
@@ -91,7 +95,9 @@ The application will be available at `https://localhost:5001`
 
 ## 👤 Default Admin Account
 
-After running the application, login with:
+> ⚠️ **Security warning:** These are **local development seed credentials only**, hardcoded for convenience when running the app on your own machine. They must be changed or removed before deploying this application anywhere reachable by others — never ship this seed account (or reuse this password) to a real/production deployment.
+
+After running the application locally, login with:
 - **Email**: `admin@tiwikom.com`
 - **Password**: `Admin@123`
 
@@ -205,4 +211,4 @@ For issues, questions, or suggestions, please open an issue on GitHub.
 
 ---
 
-**Happy tip sharing!** 🚀
+Built by [Muhammad Taufik](https://taufik.vercel.app)
